@@ -30,6 +30,12 @@ const manager = new TradeOfferManager({
 /**
  * Authenticate
  */
+Object.keys(Config.access).forEach((key) => {
+    const value = Config.access[key]
+    if (value === '' && key !== 'setNickname') {
+        throw new Error(`Bot access details are not complete in config file. Please add a value for "${key}"`)
+    }
+})
 client.logOn({
     accountName: Config.access.username,
     password: Config.access.password,
@@ -45,38 +51,38 @@ function getPricesForApps() {
         throw new Error('You did not add any allowed applications in your config file.')
     }
     Config.options.apps.forEach((appID) => {
-        request(`https://api.steamapis.com/market/items/${appID}?format=compact&api_key${Config.saApiKey}`, (err, res, body) => {
+        request(`https://api.steamapis.com/market/items/${appID}?format=compact&api_key=${Config.saApiKey}`, (err, res, body) => {
             const ErrorMessage = `Failed to get the prices for application: ${appID}.`
             if (res.statusCode === 401) {
                 throw new Error([
                     ErrorMessage,
-                    {
+                    JSON.stringify({
                         responseError: body,
                         possibleSolution: [
                             'You are using an invalid SteamApis.com API key. Fix it by adding the correct API key.',
                             'You do not have access to `market/items` url. Fix it by enabling it in: https://steamapis.com/user/upgrade',
                         ],
-                    },
+                    }, null, 4),
                 ])
             }
             if (res.statusCode === 402) {
                 throw new Error([
                     ErrorMessage,
-                    {
+                    JSON.stringify({
                         responseError: body,
                         possibleSolution: [
                             'You are out of funds on SteamApis.com. Fix it by adding more funds in: https://steamapis.com/user/payment',
                         ],
-                    },
+                    }, null, 4),
                 ])
             }
             if (err || res.statusCode !== 200) {
                 throw new Error([
                     ErrorMessage,
-                    {
+                    JSON.stringify({
                         responseError: err,
                         responseStatusCode: res.statusCode || null,
-                    },
+                    }, null, 4),
                 ])
             }
             Prices[appID] = JSON.parse(body)
@@ -137,19 +143,34 @@ function calculatePriceOfOfferArray(offer, key, modifier) {
     })
     return value
 }
+function hasNotAllowedItems(offer) {
+    let hasInvalidApp = false
+    offer.itemsToReceive.forEach((item) => {
+        if (Config.options.apps.indexOf(item.appid) === -1) {
+            hasInvalidApp = true
+        }
+    })
+    offer.itemsToGive.forEach((item) => {
+        if (Config.options.apps.indexOf(item.appid) === -1) {
+            hasInvalidApp = true
+        }
+    })
+    return hasInvalidApp
+}
 manager.on('newOffer', (offer) => {
     // Check if trade would go into escrow if we accept it
     offer.getUserDetails((err, me, them) => {
+        const partnerSteamID = offer.partner
         const partnerSteamID64 = offer.partner.getSteamID64()
         if (err) {
             // Error getting user details, decline offer
-            commentOnProfile(partnerSteamID64, Messages.Error.Unknown, true, () => {
+            commentOnProfile(partnerSteamID, Messages.Error.Unknown, true, () => {
                 offer.decline()
             })
         }
         if (them.escrowDays !== 0) {
             // Trade would go into escrow, decline offer
-            commentOnProfile(partnerSteamID64, Messages.Error.Escrow, true, () => {
+            commentOnProfile(partnerSteamID, Messages.Error.Escrow, true, () => {
                 offer.decline()
             })
         }
@@ -165,27 +186,38 @@ manager.on('newOffer', (offer) => {
             acceptOffer(offer)
         } else if (!offer.itemsToReceive) {
             // We don't receive any items, that means we decline.
-            commentOnProfile(partnerSteamID64, Messages.Error.ItemMissing, true, () => {
+            commentOnProfile(partnerSteamID, Messages.Error.ItemMissing, true, () => {
+                console.log('[Declining]', `#${offer.id} - We don't receive any items.`)
                 offer.decline()
             })
         } else if (!offer.itemsToGive) {
             // We don't give any items, that means we accept. (Donation)
-            commentOnProfile(partnerSteamID64, Messages.Success.Donation, false, () => {
+            commentOnProfile(partnerSteamID, Messages.Success.Donation, false, () => {
+                console.log('[Accepting]', `#${offer.id} - It's a donation.`)
                 acceptOffer(offer)
+            })
+        } else if (hasNotAllowedItems(offer)) {
+            // We don't accept items for the given appID, that means we decline.
+            commentOnProfile(partnerSteamID, Messages.Error.InvalidApp, true, () => {
+                console.log('[Declining]', `#${offer.id} - We don't accept items from this appID.`)
+                offer.decline()
             })
         } else if (Config.options.price.trade && calculatePriceOfOfferArray(offer, 'itemsToReceive', Config.options.price.user) < Config.options.price.trade) {
             // Items to receive overall value is below config value, that means we decline.
-            commentOnProfile(partnerSteamID64, Messages.Error.TradeValue, true, () => {
+            commentOnProfile(partnerSteamID, Messages.Error.TradeValue, true, () => {
+                console.log('[Declining]', `#${offer.id} - Trade value is too low.`)
                 offer.decline()
             })
         } else if (calculatePriceOfOfferArray(offer, 'ItemsToReceive', Config.options.price.user) < calculatePriceOfOfferArray(offer, 'ItemsToGive', Config.options.price.bot)) {
             // User did not overpay, that means we decline.
-            commentOnProfile(partnerSteamID64, Messages.Error.Overpay, true, () => {
+            commentOnProfile(partnerSteamID, Messages.Error.Overpay, true, () => {
+                console.log('[Declining]', `#${offer.id} - Trade is not overpaying.`)
                 offer.decline()
             })
         } else {
             // Everything is OK, that means we accept.
-            commentOnProfile(partnerSteamID64, Config.options.successMessage, false, () => {
+            commentOnProfile(partnerSteamID, Config.options.successMessage, false, () => {
+                console.log('[Accepting]', `#${offer.id} - All good.`)
                 acceptOffer(offer)
             })
         }
