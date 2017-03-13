@@ -45,7 +45,7 @@ function getPricesForApps() {
         throw new Error('You did not add any allowed applications in your config file.')
     }
     Config.options.apps.forEach((appID) => {
-        request(`https://steamapis.com/market/items/${appID}?format=compact&api_key${Config.saApiKey}`, (err, res, body) => {
+        request(`https://api.steamapis.com/market/items/${appID}?format=compact&api_key${Config.saApiKey}`, (err, res, body) => {
             const ErrorMessage = `Failed to get the prices for application: ${appID}.`
             if (res.statusCode === 401) {
                 throw new Error([
