@@ -21,8 +21,8 @@ npm i
 
 To start the bot you have two choices.
 
-``node bot.js`` - This means the script will run until you close the terminal or ``CTRL + C`` which exits the script.
-``pm2 start bot.js -n "SteamOverpay"`` - This will keep the script running forever, when an error occurs it will restart it.
+- ``node bot.js`` - This means the script will run until you close the terminal or ``CTRL + C`` which exits the script.
+- ``pm2 start bot.js -n "SteamOverpay"`` - This will keep the script running forever, when an error occurs it will restart it.
 
 To use the ``pm2`` method install it first ``npm i -g pm2``
 
