@@ -120,9 +120,10 @@ function commentOnProfile(steamID, message, isError, callback) {
                 CSteamUser.comment(message, callback)
             }
         })
+    } else {
+        // Adding comments is disabled
+        return callback()
     }
-    // Adding comments is disabled
-    return callback()
 }
 /**
  * Hande trades
@@ -220,12 +221,13 @@ manager.on('newOffer', (offer) => {
                 console.log('[Declining]', `#${offer.id} - Trade is not overpaying.`)
                 offer.decline()
             })
+        } else {
+            // Everything is OK, that means we accept.
+            return commentOnProfile(partnerSteamID, Config.options.successMessage, false, () => {
+                console.log('[Accepting]', `#${offer.id} - All good.`)
+                acceptOffer(offer)
+            })
         }
-        // Everything is OK, that means we accept.
-        return commentOnProfile(partnerSteamID, Config.options.successMessage, false, () => {
-            console.log('[Accepting]', `#${offer.id} - All good.`)
-            acceptOffer(offer)
-        })
     })
 })
 
