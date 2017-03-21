@@ -147,16 +147,20 @@ function calculatePriceOfOfferArray(offer, key, modifier) {
 }
 function hasNotAllowedItems(offer) {
     let hasInvalidApp = false
-    offer.itemsToReceive.forEach((item) => {
-        if (Config.options.apps.indexOf(item.appid) === -1) {
-            hasInvalidApp = true
-        }
-    })
-    offer.itemsToGive.forEach((item) => {
-        if (Config.options.apps.indexOf(item.appid) === -1) {
-            hasInvalidApp = true
-        }
-    })
+    if (offer.itemsToReceive && offer.itemsToReceive.length) {
+        offer.itemsToReceive.forEach((item) => {
+            if (Config.options.apps.indexOf(item.appid) === -1) {
+                hasInvalidApp = true
+            }
+        })
+    }
+    if (offer.itemsToGive && offer.itemsToGive) {
+        offer.itemsToGive.forEach((item) => {
+            if (Config.options.apps.indexOf(item.appid) === -1) {
+                hasInvalidApp = true
+            }
+        })
+    }
     return hasInvalidApp
 }
 manager.on('newOffer', (offer) => {
