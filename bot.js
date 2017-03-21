@@ -132,7 +132,7 @@ function acceptOffer(offer) {
         if (err) {
             console.log('[acceptOffer]', `Failure #${offer.id}`, err)
         } else {
-            community.checkConfirmations()
+            community.acceptConfirmationForObject(Config.access.identitySecret, offer.id)
         }
     })
 }
