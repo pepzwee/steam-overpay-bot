@@ -138,9 +138,11 @@ function acceptOffer(offer) {
 }
 function calculatePriceOfOfferArray(offer, key, modifier) {
     let value = 0
-    offer[key].forEach((item) => {
-        value += item.amount * (Prices[item.appid][item.market_hash_name] * modifier || 0)
-    })
+    if (offer[key] && offer[key].length) {
+        offer[key].forEach((item) => {
+            value += item.amount * (Prices[item.appid][item.market_hash_name] * modifier || 0)
+        })
+    }
     return value
 }
 function hasNotAllowedItems(offer) {
