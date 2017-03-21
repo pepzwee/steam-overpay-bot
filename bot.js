@@ -170,13 +170,13 @@ manager.on('newOffer', (offer) => {
         const partnerSteamID64 = offer.partner.getSteamID64()
         if (err) {
             // Error getting user details, decline offer
-            commentOnProfile(partnerSteamID, Messages.Error.Unknown, true, () => {
+            return commentOnProfile(partnerSteamID, Messages.Error.Unknown, true, () => {
                 offer.decline()
             })
         }
         if (them.escrowDays !== 0) {
             // Trade would go into escrow, decline offer
-            commentOnProfile(partnerSteamID, Messages.Error.Escrow, true, () => {
+            return commentOnProfile(partnerSteamID, Messages.Error.Escrow, true, () => {
                 offer.decline()
             })
         }
@@ -189,44 +189,43 @@ manager.on('newOffer', (offer) => {
         if (Config.adminSteamID64s.indexOf(partnerSteamID64) !== -1) {
             // Trade came from an admin, that means we accept.
             console.log('[Accepting]', `#${offer.id} - User is an admin.`)
-            acceptOffer(offer)
+            return acceptOffer(offer)
         } else if (!offer.itemsToReceive) {
             // We don't receive any items, that means we decline.
-            commentOnProfile(partnerSteamID, Messages.Error.ItemMissing, true, () => {
+            return commentOnProfile(partnerSteamID, Messages.Error.ItemMissing, true, () => {
                 console.log('[Declining]', `#${offer.id} - We don't receive any items.`)
                 offer.decline()
             })
         } else if (!offer.itemsToGive) {
             // We don't give any items, that means we accept. (Donation)
-            commentOnProfile(partnerSteamID, Messages.Success.Donation, false, () => {
+            return commentOnProfile(partnerSteamID, Messages.Success.Donation, false, () => {
                 console.log('[Accepting]', `#${offer.id} - It's a donation.`)
                 acceptOffer(offer)
             })
         } else if (hasNotAllowedItems(offer)) {
             // We don't accept items for the given appID, that means we decline.
-            commentOnProfile(partnerSteamID, Messages.Error.InvalidApp, true, () => {
+            return commentOnProfile(partnerSteamID, Messages.Error.InvalidApp, true, () => {
                 console.log('[Declining]', `#${offer.id} - We don't accept items from this appID.`)
                 offer.decline()
             })
         } else if (Config.options.price.trade && calculatePriceOfOfferArray(offer, 'itemsToReceive', Config.options.price.user) < Config.options.price.trade) {
             // Items to receive overall value is below config value, that means we decline.
-            commentOnProfile(partnerSteamID, Messages.Error.TradeValue, true, () => {
+            return commentOnProfile(partnerSteamID, Messages.Error.TradeValue, true, () => {
                 console.log('[Declining]', `#${offer.id} - Trade value is too low.`)
                 offer.decline()
             })
         } else if (calculatePriceOfOfferArray(offer, 'ItemsToReceive', Config.options.price.user) < calculatePriceOfOfferArray(offer, 'ItemsToGive', Config.options.price.bot)) {
             // User did not overpay, that means we decline.
-            commentOnProfile(partnerSteamID, Messages.Error.Overpay, true, () => {
+            return commentOnProfile(partnerSteamID, Messages.Error.Overpay, true, () => {
                 console.log('[Declining]', `#${offer.id} - Trade is not overpaying.`)
                 offer.decline()
             })
-        } else {
-            // Everything is OK, that means we accept.
-            commentOnProfile(partnerSteamID, Config.options.successMessage, false, () => {
-                console.log('[Accepting]', `#${offer.id} - All good.`)
-                acceptOffer(offer)
-            })
         }
+        // Everything is OK, that means we accept.
+        return commentOnProfile(partnerSteamID, Config.options.successMessage, false, () => {
+            console.log('[Accepting]', `#${offer.id} - All good.`)
+            acceptOffer(offer)
+        })
     })
 })
 
