@@ -128,12 +128,21 @@ function commentOnProfile(steamID, message, isError, callback) {
 /**
  * Hande trades
  */
-function acceptOffer(offer) {
+function acceptOffer(offer, retries) {
+    let retry = retries
+    if (typeof retry === 'undefined') {
+        retry = 0
+    }
     offer.accept((err) => {
         if (err) {
             console.log('[acceptOffer]', `Failure #${offer.id}`, err)
         } else {
-            community.acceptConfirmationForObject(Config.access.identitySecret, offer.id)
+            community.acceptConfirmationForObject(Config.access.identitySecret, offer.id, (acceptErr) => {
+                if (acceptErr && retry <= 3) {
+                    retry += 1
+                    setTimeout(acceptOffer(offer, retry), 10000)
+                }
+            })
         }
     })
 }
